@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciador do Bot Jira (Autônomo)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .diag-box { max-height: 200px; overflow-y: auto; background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px; }
+        .badge-autonomous { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid p-4">
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold"><i class="bi bi-robot"></i> Painel de Controle SaaS</h2>
+                <p class="text-muted">Gerencie a integração Slack ↔ Jira para múltiplos times.</p>
+            </div>
+        </div>
+
+        <div class="row">
+            
+            <div class="col-md-5">
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="m-0"><i class="bi bi-gear-fill"></i> Mapeamento de Canal</h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="alert badge-autonomous mb-4 d-flex align-items-center">
+                            <i class="bi bi-magic fs-3 me-3"></i>
+                            <div>
+                                <strong>Modo Autônomo Ativado!</strong><br>
+                                <small>Não é necessário configurar botões. O Bot detecta o fluxo do Jira automaticamente.</small>
+                            </div>
+                        </div>
+
+                        <form action="{{ url_for('config_save') }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">ID do Canal Slack</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                                    <input type="text" name="channel_id" class="form-control" placeholder="Ex: C05..." required>
+                                </div>
+                                <div class="form-text">Botão direito no canal -> Copiar Link -> Pegue o código final.</div>
+                            </div>
+                            
+                            <hr class="my-4">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Chave do Projeto Jira</label>
+                                <input type="text" name="project_key" class="form-control" placeholder="Ex: KAN, MKT, DEV" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 mt-3 py-2 fw-bold">
+                                <i class="bi bi-save"></i> Salvar Mapeamento
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">Mapeamentos Ativos</div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr><th>Canal</th><th>Projeto</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for ch_id, data in configs.items() %}
+                                <tr>
+                                    <td><code>{{ ch_id }}</code></td>
+                                    <td><span class="badge bg-primary">{{ data.project_key }}</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="2" class="text-center text-muted py-3">Nenhum canal configurado.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card shadow border-info h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="m-0"><i class="bi bi-search"></i> Detetive de Bloqueios</h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="alert alert-light border mb-4">
+                            <i class="bi bi-info-circle-fill text-info"></i>
+                            O Bot só consegue criar tickets se o Jira não exigir campos "estranhos" (obrigatórios) além de Título e Descrição.
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="fw-bold">🚨 Verificar Campos Obrigatórios:</label>
+                            <form action="{{ url_for('config_page') }}" method="GET" class="d-flex gap-2 mt-2">
+                                <input type="text" name="debug_project" class="form-control" placeholder="Digite a chave do projeto (Ex: KAN)" value="{{ diag.debug_project or '' }}">
+                                <button type="submit" class="btn btn-warning text-dark fw-bold">Checar</button>
+                            </form>
+                        </div>
+
+                        <hr>
+
+                        {% if diag.debug_project %}
+                            <h6 class="fw-bold mb-3">Resultado para: <span class="text-primary">{{ diag.debug_project }}</span></h6>
+
+                            {% if diag.required_fields %}
+                                <div class="alert alert-danger shadow-sm">
+                                    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> BLOQUEIO DETECTADO!</h4>
+                                    <p>O Bot <b>NÃO</b> conseguirá criar tickets neste projeto.</p>
+                                    <hr>
+                                    <p class="mb-0">O Jira exige os seguintes campos extras:</p>
+                                    <ul class="mt-2 mb-3">
+                                        {% for f in diag.required_fields %}
+                                            <li>
+                                                <strong>{{ f.name }}</strong> 
+                                                <span class="badge bg-secondary">{{ f.id }}</span>
+                                                <small class="text-muted">Tipo: {{ f.type }}</small>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                    <p class="mb-0 fw-bold">Solução: Torne estes campos opcionais na configuração do Jira.</p>
+                                </div>
+                            {% elif diag.required_fields_error %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-bug-fill"></i> Erro ao consultar Jira: {{ diag.required_fields_error }}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success shadow-sm py-4 text-center">
+                                    <h1 class="display-4"><i class="bi bi-check-circle-fill text-success"></i></h1>
+                                    <h5 class="fw-bold">Tudo Limpo!</h5>
+                                    <p class="mb-0">Este projeto não tem campos obrigatórios extras bloqueando o Bot.</p>
+                                </div>
+                            {% endif %}
+                        
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-arrow-up-circle fs-1"></i>
+                                <p>Digite o projeto acima para investigar.</p>
+                            </div>
+                        {% endif %}
+
+                        <hr>
+                        
+                        <small class="text-muted fw-bold">BOARDS ENCONTRADOS NO JIRA:</small>
+                        <div class="diag-box mt-1">
+                            <ul class="list-unstyled mb-0 small">
+                                {% for b in diag.boards %}
+                                    <li>📌 {{ b }}</li>
+                                {% else %}
+                                    <li class="text-muted">Nenhum board visível.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

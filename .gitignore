@@ -1,0 +1,28 @@
+# Python & Virtual Environments
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Variáveis de Ambiente e Credenciais Seguras
+.env
+.env.local
+.env.development
+
+# Logs e Dados Ocultos
+logs/
+*.log
+.gemini/
+
+# Infraestrutura de Cloud Oculta local
+.serverless/
+.azurefunctions/
+.vscode/
+
+# Cache de testes
+.pytest_cache/
+htmlcov/
+
+# Notas e Rascunhos Pessoais
+ENDPOINTS_MULTICLOUD.md

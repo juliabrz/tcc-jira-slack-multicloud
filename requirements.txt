@@ -1,0 +1,13 @@
+flask
+slack_bolt
+slack_sdk
+jira
+boto3
+azure-storage-queue
+azure-functions
+azure-data-tables
+python-dotenv
+pyngrok
+requests
+pytest
+serverless-wsgi

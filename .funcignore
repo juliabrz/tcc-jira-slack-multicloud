@@ -1,0 +1,11 @@
+.git*
+.vscode
+local.settings.json
+test
+venv
+.venv
+__pycache__
+.serverless
+node_modules
+package.json
+package-lock.json
